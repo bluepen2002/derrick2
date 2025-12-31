@@ -167,6 +167,11 @@
       text-align: center;
       font-weight: bold;
     }
+
+    /* Hide clear button by default */
+    #clearPortfolioBtn {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -238,8 +243,8 @@
   </div>
 
   <div style="text-align: center; margin-top: 30px;">
-    <button onclick="clearPortfolio()" style="padding: 10px 20px; background: #c0392b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
-      Clear Portfolio (Reset)
+    <button id="clearPortfolioBtn" onclick="clearPortfolio()" style="padding: 10px 20px; background: #c0392b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+      Clear All Uploads (Admin)
     </button>
   </div>
 </section>
@@ -276,6 +281,10 @@
     <p>Upload project screenshots, designs, or photos (PNG, JPG)</p>
     <input type="file" id="portfolioUpload" accept="image/*" multiple>
     <p><small>Images are saved in your browser only (localStorage)</small></p>
+
+    <button onclick="clearPortfolio()" style="margin-top: 20px; padding: 10px 24px; background: #c0392b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">
+      Clear All Uploads
+    </button>
   </div>
 </section>
 
@@ -292,13 +301,14 @@ const STORAGE_KEY = 'derrickPortfolioImages';
 const ADMIN_PASSWORD = 'derrick251';   // ← CHANGE THIS TO YOUR OWN SECRET PASSWORD
 
 let portfolioImages = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+let isAdmin = false;
 
 function loadPortfolio() {
   const gallery = document.getElementById('portfolioGallery');
   gallery.innerHTML = '';
 
   if (portfolioImages.length === 0) {
-    gallery.innerHTML = '<p style="text-align:center; color:#777; font-style:italic;">No projects added yet. Upload some work!</p>';
+    gallery.innerHTML = '<p style="text-align:center; color:#777; font-style:italic;">No projects added yet.</p>';
     return;
   }
 
@@ -312,34 +322,30 @@ function loadPortfolio() {
 
 function showSuccessMessage(count) {
   const msg = document.getElementById('uploadSuccess');
-  msg.textContent = `Success! ${count} image(s) added to portfolio. Refresh to see them if needed.`;
+  msg.textContent = `Success! ${count} image(s) added to portfolio.`;
   msg.style.display = 'block';
   
-  // Auto-hide after 4 seconds
   setTimeout(() => {
     msg.style.display = 'none';
   }, 4000);
 }
 
 function addToPortfolio(files) {
+  if (!isAdmin) return;
+
   let loadedCount = 0;
-  const totalFiles = files.length;
+  const validFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
 
-  if (totalFiles === 0) return;
+  if (validFiles.length === 0) return;
 
-  Array.from(files).forEach(file => {
-    if (!file.type.startsWith('image/')) {
-      totalFiles--; // skip non-images
-      return;
-    }
-
+  validFiles.forEach(file => {
     const reader = new FileReader();
     reader.onload = function(e) {
       portfolioImages.push(e.target.result);
       loadedCount++;
-      if (loadedCount === totalFiles) {
+      if (loadedCount === validFiles.length) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolioImages));
-        loadPortfolio(); // immediate refresh of gallery
+        loadPortfolio();
         showSuccessMessage(loadedCount);
       }
     };
@@ -348,18 +354,25 @@ function addToPortfolio(files) {
 }
 
 function clearPortfolio() {
-  if (confirm("Are you sure you want to clear all portfolio images?")) {
+  if (!isAdmin) {
+    alert("Only admin can clear uploads.");
+    return;
+  }
+  if (confirm("Are you sure you want to delete ALL uploaded images?")) {
     portfolioImages = [];
     localStorage.removeItem(STORAGE_KEY);
     loadPortfolio();
+    alert("All uploads cleared.");
   }
 }
 
 function showUploadIfAdmin() {
-  const pw = prompt("Enter password to show upload area:");
+  const pw = prompt("Enter password to access admin features:");
   if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
     document.getElementById('uploadArea').style.display = 'block';
-    alert("Upload area unlocked for this session.");
+    document.getElementById('clearPortfolioBtn').style.display = 'block'; // show the one in portfolio section
+    alert("Admin access granted.");
   } else {
     alert("Incorrect password.");
   }
