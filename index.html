@@ -106,9 +106,7 @@
       font-size: 14px;
     }
 
-    /* ─────────────────────────────────────────────── */
     /* Responsive adjustments */
-    /* ─────────────────────────────────────────────── */
     @media (max-width: 600px) {
       section {
         padding: 30px 15px;
@@ -146,7 +144,7 @@
       max-width: 100%;
       width: auto;
       box-sizing: border-box;
-      min-width: 220px; /* prevents it from becoming too narrow */
+      min-width: 220px;
     }
     @media (max-width: 480px) {
       .admin-button {
@@ -154,6 +152,20 @@
         font-size: 14px;
         min-width: 180px;
       }
+    }
+
+    /* Success message style */
+    #uploadSuccess {
+      display: none;
+      background-color: #d4edda;
+      color: #155724;
+      padding: 12px;
+      margin: 15px auto;
+      max-width: 600px;
+      border: 1px solid #c3e6cb;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -257,6 +269,8 @@
     </button>
   </div>
 
+  <div id="uploadSuccess"></div>
+
   <div class="upload-area" id="uploadArea" style="display: none;">
     <h3>Add Your Work to Portfolio</h3>
     <p>Upload project screenshots, designs, or photos (PNG, JPG)</p>
@@ -296,19 +310,37 @@ function loadPortfolio() {
   });
 }
 
+function showSuccessMessage(count) {
+  const msg = document.getElementById('uploadSuccess');
+  msg.textContent = `Success! ${count} image(s) added to portfolio. Refresh to see them if needed.`;
+  msg.style.display = 'block';
+  
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    msg.style.display = 'none';
+  }, 4000);
+}
+
 function addToPortfolio(files) {
   let loadedCount = 0;
+  const totalFiles = files.length;
+
+  if (totalFiles === 0) return;
 
   Array.from(files).forEach(file => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file.type.startsWith('image/')) {
+      totalFiles--; // skip non-images
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = function(e) {
       portfolioImages.push(e.target.result);
       loadedCount++;
-      if (loadedCount === files.length) {
+      if (loadedCount === totalFiles) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolioImages));
-        loadPortfolio();
+        loadPortfolio(); // immediate refresh of gallery
+        showSuccessMessage(loadedCount);
       }
     };
     reader.readAsDataURL(file);
